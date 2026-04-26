@@ -131,11 +131,11 @@ app.use((err, req, res, next) => {
 connectDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✅ BMPT Trading Server on port ${PORT}`);
-    console.log(`   DB: ${process.env.MONGO_URI || 'mongodb://localhost:27017/bmpt'}`);
-    console.log(`   Health: http://localhost:${PORT}/health`);
-    console.log(`\n📡 CORS enabled for origins:`, allowedOrigins);
-    console.log(`🔑 API Key required for all /api routes`);
-    console.log(`\n🚀 Server ready for dashboard at http://localhost:4000\n`);
+    // console.log(`   DB: ${process.env.MONGO_URI || 'mongodb://localhost:27017/bmpt'}`);
+    // console.log(`   Health: http://localhost:${PORT}/health`);
+    // console.log(`\n📡 CORS enabled for origins:`, allowedOrigins);
+    // console.log(`🔑 API Key required for all /api routes`);
+    // console.log(`\n🚀 Server ready for dashboard at http://localhost:4000\n`);
   });
 }).catch(err => {
   console.error('❌ Failed to connect to MongoDB:', err.message);
