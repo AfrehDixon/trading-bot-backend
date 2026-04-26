@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name:        'bmpt-trading-server',
+    name:        'trading-server',
     script:      'src/app.js',
     instances:   1,
     autorestart: true,
@@ -8,7 +8,7 @@ module.exports = {
     max_memory_restart: '200M',
     env: {
       NODE_ENV: 'production',
-      PORT:     3000
+      PORT:     7000
     },
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     error_file:  './logs/error.log',

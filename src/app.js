@@ -59,7 +59,7 @@ app.get('/', (req, res) => res.json({
 
 // Connect to MongoDB then start server
 connectDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '127.0.0.1', () => {
     console.log(`\n✅ BMPT Trading Server on port ${PORT}`);
     console.log(`   DB: ${process.env.MONGO_URI}`);
     console.log(`   Health: http://localhost:${PORT}/health\n`);
