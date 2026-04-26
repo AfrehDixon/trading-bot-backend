@@ -68,8 +68,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Auth middleware for all /api routes
-app.use('/api', (req, res, next) => {
+// Auth middleware for all /api/trading routes
+app.use('/api/trading', (req, res, next) => {
   const key = req.headers['x-api-key'] || req.query.apikey;
   if (key !== API_KEY) {
     console.log(`🔑 Auth failed for ${req.path} - Key: ${key}`);
@@ -79,11 +79,11 @@ app.use('/api', (req, res, next) => {
 });
 
 // Routes
-app.use('/api/ea', eaRoutes);
-app.use('/api/trades', tradeRoutes);
-app.use('/api/signals', signalRoutes);
-app.use('/api/status', statusRoutes);
-app.use('/api/dashboard', dashRoutes);
+app.use('/api/trading/ea', eaRoutes);
+app.use('/api/trading/trades', tradeRoutes);
+app.use('/api/trading/signals', signalRoutes);
+app.use('/api/trading/status', statusRoutes);
+app.use('/api/trading/dashboard', dashRoutes);
 
 // Public endpoints
 app.get('/health', (req, res) => {
@@ -102,16 +102,16 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     routes: [
       'GET  /health',
-      'POST /api/ea/heartbeat',
-      'POST /api/ea/signal',
-      'POST /api/trades/open',
-      'POST /api/trades/close',
-      'GET  /api/trades/list',
-      'GET  /api/trades/stats',
-      'GET  /api/signals/latest',
-      'GET  /api/signals/history',
-      'GET  /api/status',
-      'GET  /api/dashboard'
+      'POST /api/trading/ea/heartbeat',
+      'POST /api/trading/ea/signal',
+      'POST /api/trading/trades/open',
+      'POST /api/trading/trades/close',
+      'GET  /api/trading/trades/list',
+      'GET  /api/trading/trades/stats',
+      'GET  /api/trading/signals/latest',
+      'GET  /api/trading/signals/history',
+      'GET  /api/trading/status',
+      'GET  /api/trading/dashboard'
     ]
   });
 });
@@ -134,7 +134,7 @@ connectDB().then(() => {
     // console.log(`   DB: ${process.env.MONGO_URI || 'mongodb://localhost:27017/bmpt'}`);
     // console.log(`   Health: http://localhost:${PORT}/health`);
     // console.log(`\n📡 CORS enabled for origins:`, allowedOrigins);
-    // console.log(`🔑 API Key required for all /api routes`);
+    // console.log(`🔑 API Key required for all /api/trading routes`);
     // console.log(`\n🚀 Server ready for dashboard at http://localhost:4000\n`);
   });
 }).catch(err => {

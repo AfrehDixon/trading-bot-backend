@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const Trade   = require('../models/Trade');
 
-// POST /api/trades/open
+// POST /api/trading/trades/open
 router.post('/open', async (req, res) => {
   const { ticket, ea_name, symbol, direction, lot_size, entry_price, sl, tp, rr, score, reason } = req.body;
   if (!ea_name || !symbol || !direction) return res.status(400).json({ error: 'ea_name, symbol, direction required' });
@@ -12,7 +12,7 @@ router.post('/open', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/trades/close
+// POST /api/trading/trades/close
 router.post('/close', async (req, res) => {
   const { ticket, ea_name, exit_price, profit, pips } = req.body;
   if (!ea_name) return res.status(400).json({ error: 'ea_name required' });
@@ -30,7 +30,7 @@ router.post('/close', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/trades/list
+// GET /api/trading/trades/list
 router.get('/list', async (req, res) => {
   const { ea_name, symbol, status, limit = 50 } = req.query;
   try {
@@ -43,7 +43,7 @@ router.get('/list', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/trades/stats
+// GET /api/trading/trades/stats
 router.get('/stats', async (req, res) => {
   const { ea_name } = req.query;
   try {

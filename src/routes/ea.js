@@ -3,7 +3,7 @@ const router    = express.Router();
 const Heartbeat = require('../models/Heartbeat');
 const Signal    = require('../models/Signal');
 
-// POST /api/ea/heartbeat
+// POST /api/trading/ea/heartbeat
 router.post('/heartbeat', async (req, res) => {
   const { ea_name, symbol, timeframe, account_id, balance, equity, message } = req.body;
   if (!ea_name || !symbol) return res.status(400).json({ error: 'ea_name and symbol required' });
@@ -13,7 +13,7 @@ router.post('/heartbeat', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/ea/signal
+// POST /api/trading/ea/signal
 router.post('/signal', async (req, res) => {
   const { ea_name, symbol, direction, score, pattern, reason, entry, sl, tp, rr } = req.body;
   if (!ea_name || !symbol || !direction) return res.status(400).json({ error: 'ea_name, symbol, direction required' });
@@ -23,7 +23,7 @@ router.post('/signal', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/ea/alive — EAs active in last 5 minutes
+// GET /api/trading/ea/alive — EAs active in last 5 minutes
 router.get('/alive', async (req, res) => {
   try {
     const since = new Date(Date.now() - 5 * 60 * 1000);

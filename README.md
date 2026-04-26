@@ -68,10 +68,10 @@ ufw allow 3000 && ufw enable
 curl http://YOUR-VPS-IP:3000/health
 
 # Status (needs API key)
-curl -H "X-Api-Key: bmpt-your-key" http://YOUR-VPS-IP:3000/api/status
+curl -H "X-Api-Key: bmpt-your-key" http://YOUR-VPS-IP:3000/api/trading/status
 
 # Dashboard
-curl -H "X-Api-Key: bmpt-your-key" http://YOUR-VPS-IP:3000/api/dashboard
+curl -H "X-Api-Key: bmpt-your-key" http://YOUR-VPS-IP:3000/api/trading/dashboard
 ```
 
 ---
@@ -156,17 +156,17 @@ All routes need header: `X-Api-Key: your-key`
 
 ```
 GET  /health                  No auth
-GET  /api/status              Server summary
-GET  /api/dashboard           Full dashboard
-GET  /api/ea/alive            Live EAs
-GET  /api/trades/list         All trades
-GET  /api/trades/stats        Win rate, profit
-GET  /api/signals/latest      Signal history
+GET  /api/trading/status              Server summary
+GET  /api/trading/dashboard           Full dashboard
+GET  /api/trading/ea/alive            Live EAs
+GET  /api/trading/trades/list         All trades
+GET  /api/trading/trades/stats        Win rate, profit
+GET  /api/trading/signals/latest      Signal history
 
-POST /api/ea/heartbeat        EA alive ping
-POST /api/ea/signal           EA found signal
-POST /api/trades/open         Trade opened
-POST /api/trades/close        Trade closed
+POST /api/trading/ea/heartbeat        EA alive ping
+POST /api/trading/ea/signal           EA found signal
+POST /api/trading/trades/open         Trade opened
+POST /api/trading/trades/close        Trade closed
 ```
 
 ---
@@ -178,9 +178,9 @@ POST /api/trades/close        Trade closed
 2. EA scans market every bar (M5/M15/H1)
 3. Signal found → EA places PENDING LIMIT in MT5
 4. Price pulls back to limit → trade fills
-5. EA posts to server: /api/trades/open
+5. EA posts to server: /api/trading/trades/open
 6. Trade runs to TP or SL
-7. EA posts to server: /api/trades/close
+7. EA posts to server: /api/trading/trades/close
 8. Dashboard updates automatically
 
 Server stores ALL history in MongoDB

@@ -290,19 +290,19 @@ void ServerPost(string endpoint,string json){
 }
 
 void ServerHeartbeat(string msg){
-   ServerPost("/api/ea/heartbeat",StringFormat(
+   ServerPost("/api/trading/ea/heartbeat",StringFormat(
       "{\"ea_name\":\"PropFirmElite\",\"symbol\":\"%s\",\"timeframe\":\"%s\",\"balance\":%.2f,\"equity\":%.2f,\"message\":\"%s\"}",
       _Symbol,EnumToString(Period()),AccountInfoDouble(ACCOUNT_BALANCE),AccountInfoDouble(ACCOUNT_EQUITY),msg));
 }
 
 void ServerSignal(const SSignal &sig,double entry,double sl,double tp,double rr){
-   ServerPost("/api/ea/signal",StringFormat(
+   ServerPost("/api/trading/ea/signal",StringFormat(
       "{\"ea_name\":\"PropFirmElite\",\"symbol\":\"%s\",\"direction\":\"%s\",\"score\":%d,\"pattern\":\"%s\",\"reason\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f}",
       _Symbol,sig.isBull?"BUY":"SELL",sig.score,PatName(sig.pattern),sig.reason,entry,sl,tp,rr));
 }
 
 void ServerClose(long ticket,double profit,string reason){
-   ServerPost("/api/trades/close",StringFormat(
+   ServerPost("/api/trading/trades/close",StringFormat(
       "{\"ea_name\":\"PropFirmElite\",\"ticket\":%d,\"profit\":%.2f,\"reason\":\"%s\"}",ticket,profit,reason));
 }
 
