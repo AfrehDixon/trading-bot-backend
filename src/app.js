@@ -21,7 +21,10 @@ const allowedOrigins = [
   'http://localhost:4000',
   'http://localhost:3000',
   'http://127.0.0.1:4000',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'https://trading-dashbaord-lilac.vercel.app',
+  'https://trading-dashbaord-git-main-afrehdixons-projects.vercel.app',
+  'https://trading-dashbaord-6nt3e26kj-afrehdixons-projects.vercel.app'
 ];
 
 // Configure CORS properly
