@@ -59,7 +59,7 @@ app.options('*', (req, res) => {
 
 // Other middleware
 app.use(helmet());
-app.use(morgan('combined'));
+// app.use(morgan('combined'));
 app.use(express.json());
 
 // Debug middleware to log all requests
