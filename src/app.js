@@ -64,7 +64,7 @@ app.use(express.json());
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'no-origin'}`);
+  // console.log(`📡 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'no-origin'}`);
   // Always set CORS headers for every response
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Credentials', 'true');
