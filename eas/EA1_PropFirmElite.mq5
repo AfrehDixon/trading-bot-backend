@@ -12,7 +12,7 @@
 #include <Trade\OrderInfo.mqh>
 
 input group "=== SERVER CONNECTION ==="
-input string Server_URL    = "http://YOUR-SERVER-IP:7001"; // Your VPS IP
+input string Server_URL    = "https://odkgh.com/api/trading"; // Your VPS IP
 input string API_Key       = "bmpt-your-secret-key-change-this";
 input bool   Use_Server    = true;   // false = run without server
 
@@ -183,19 +183,21 @@ void ManageActive(){
 
 void ManagePending(){
    if(!g_hasPend)return;
+   bool found=false;
    for(int i=OrdersTotal()-1;i>=0;i--){
       if(g_order.SelectByIndex(i)&&g_order.Ticket()==g_pendTick){
+         found=true;
          ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)g_order.State();
          if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}
-         goto expCheck;
+         break;
       }
    }
-   if(HistoryOrderSelect(g_pendTick)){
+   if(!found&&HistoryOrderSelect(g_pendTick)){
       ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)HistoryOrderGetInteger(g_pendTick,ORDER_STATE);
       if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}
    }
-   expCheck:
-   int bp=0;for(int i=0;i<200;i++){if(iTime(_Symbol,PERIOD_CURRENT,i)<=g_ppBar){bp=i;break;}}
+   int bp=0;
+   for(int i=0;i<200;i++){if(iTime(_Symbol,PERIOD_CURRENT,i)<=g_ppBar){bp=i;break;}}
    if(bp>=Limit_Expiry){if(g_trade.OrderDelete(g_pendTick))Print("PENDING CANCELLED");g_hasPend=false;g_pendTick=0;}
 }
 
@@ -283,9 +285,10 @@ void OnTradeTransaction(const MqlTradeTransaction &t,const MqlTradeRequest &req,
 // ── Server communication ─────────────────────────────────────
 void ServerPost(string endpoint,string json){
    if(!Use_Server)return;
-   char post[];string result,headers="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";
+   char post[];uchar result[];string resHeaders;
+   string headers="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";
    StringToCharArray(json,post,0,StringLen(json));
-   int ret=WebRequest("POST",Server_URL+endpoint,headers,3000,post,result,headers);
+   int ret=WebRequest("POST",Server_URL+endpoint,headers,3000,post,result,resHeaders);
    if(ret<0)PrintFormat("Server error %d on %s",GetLastError(),endpoint);
 }
 

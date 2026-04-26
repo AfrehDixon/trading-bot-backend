@@ -35,6 +35,11 @@
 #include <Trade\PositionInfo.mqh>
 #include <Trade\OrderInfo.mqh>
 
+input group "=== SERVER CONNECTION ==="
+input string Server_URL = "https://odkgh.com/api/trading";
+input string API_Key    = "bmpt-your-secret-key-change-this";
+input bool   Use_Server = true;
+
 input group "=== RISK ==="
 input double Risk_Pct          = 1.0;   // % risk per trade
 input double Risk_DailyLoss    = 5.0;   // Stop for the day at 5% loss
@@ -119,6 +124,44 @@ ulong    g_pendingTicket;
 
 int GenMagic(string s,ENUM_TIMEFRAMES tf){int h=0;for(int i=0;i<StringLen(s);i++)h=h*31+(int)StringGetCharacter(s,i);return MathAbs(h)%90000+10000+(int)tf+3141;}
 
+
+//+------------------------------------------------------------------+
+//  SERVER REPORTING — https://odkgh.com/api/trading
+//+------------------------------------------------------------------+
+void ServerPost(string endpoint,string json){
+   if(!Use_Server)return;
+   char post[];uchar result[];string resHeaders;
+   string headers="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";
+   StringToCharArray(json,post,0,StringLen(json));
+   int ret=WebRequest("POST",Server_URL+endpoint,headers,5000,post,result,resHeaders);
+   if(ret<0)PrintFormat("Server error %d on %s — add %s to MT5 WebRequest list",GetLastError(),endpoint,Server_URL);
+}
+
+void ServerHeartbeat(string msg){
+   ServerPost("/ea/heartbeat",StringFormat(
+      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"timeframe\":\"%s\",\"balance\":%.2f,\"equity\":%.2f,\"message\":\"%s\"}",
+      __FILE__,_Symbol,EnumToString(Period()),
+      AccountInfoDouble(ACCOUNT_BALANCE),AccountInfoDouble(ACCOUNT_EQUITY),msg));
+}
+
+void ServerSignal(string direction,int score,string pattern,string reason,double entry,double sl,double tp,double rr){
+   ServerPost("/ea/signal",StringFormat(
+      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"direction\":\"%s\",\"score\":%d,\"pattern\":\"%s\",\"reason\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f}",
+      __FILE__,_Symbol,direction,score,pattern,reason,entry,sl,tp,rr));
+}
+
+void ServerTradeOpen(ulong ticket,string direction,double lot,double entry,double sl,double tp,double rr,int score){
+   ServerPost("/trades/open",StringFormat(
+      "{\"ea_name\":\"%s\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f,\"score\":%d}",
+      __FILE__,ticket,_Symbol,direction,lot,entry,sl,tp,rr,score));
+}
+
+void ServerTradeClose(long ticket,double profit,string reason){
+   ServerPost("/trades/close",StringFormat(
+      "{\"ea_name\":\"%s\",\"ticket\":%d,\"profit\":%.2f,\"reason\":\"%s\"}",
+      __FILE__,ticket,profit,reason));
+}
+
 int OnInit()
 {
    g_magic=GenMagic(_Symbol,Period());
@@ -144,6 +187,7 @@ int OnInit()
    g_pendingPlacedBar=0;g_lastOrderBar=0;g_brokerWait=0;
 
    ScanExistingPending();
+   if(Use_Server)ServerHeartbeat("OnInit");
    PrintFormat("StepIndexPro v1.00 | %s %s | Magic:%d | MinScore:%d/8",
                _Symbol,EnumToString(Period()),g_magic,Min_Score);
    return INIT_SUCCEEDED;
@@ -526,7 +570,7 @@ void OnTradeTransaction(const MqlTradeTransaction &t,const MqlTradeRequest &req,
    if(HistoryDealGetInteger(t.deal,DEAL_ENTRY)==DEAL_ENTRY_IN){g_hasPending=false;g_brokerWait=0;PrintFormat("FILLED at %.2f",HistoryDealGetDouble(t.deal,DEAL_PRICE));return;}
    if(HistoryDealGetInteger(t.deal,DEAL_ENTRY)!=DEAL_ENTRY_OUT)return;
    double p=HistoryDealGetDouble(t.deal,DEAL_PROFIT);g_profit+=p;
-   if(p>=0){g_wins++;g_consec=0;PrintFormat("WIN +%.2f | W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
+   if(p>=0){if(Use_Server)ServerTradeClose(t.deal,p,"WIN");g_wins++;g_consec=0;PrintFormat("WIN +%.2f | W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
    else{g_losses++;g_consec++;PrintFormat("LOSS %.2f | W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
 }
 

@@ -43,6 +43,7 @@ input string Server_URL = "https://odkgh.com/api/trading";
 input string API_Key    = "bmpt-your-secret-key-change-this";
 input bool   Use_Server = true;
 
+
 input group "=== RISK MANAGEMENT (From Book: max 1-2%) ==="
 input double Risk_Pct          = 1.0;   // % risk per trade (book: 1% beginner, 2% max)
 input double Risk_DailyLoss    = 4.0;   // Stop day at this % loss
@@ -143,9 +144,8 @@ bool     g_partialDone;   // track if partial close done this trade
 
 int GenMagic(string s,ENUM_TIMEFRAMES tf){int h=0;for(int i=0;i<StringLen(s);i++)h=h*31+(int)StringGetCharacter(s,i);return MathAbs(h)%90000+10000+(int)tf+1597;}
 
-
 //+------------------------------------------------------------------+
-//  SERVER REPORTING — https://odkgh.com/api/trading
+//  SERVER — https://odkgh.com/api/trading
 //+------------------------------------------------------------------+
 void ServerPost(string endpoint,string json){
    if(!Use_Server)return;
@@ -153,33 +153,29 @@ void ServerPost(string endpoint,string json){
    string headers="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";
    StringToCharArray(json,post,0,StringLen(json));
    int ret=WebRequest("POST",Server_URL+endpoint,headers,5000,post,result,resHeaders);
-   if(ret<0)PrintFormat("Server error %d on %s — add %s to MT5 WebRequest list",GetLastError(),endpoint,Server_URL);
+   if(ret<0)PrintFormat("Server error %d — add %s to MT5 WebRequest list",GetLastError(),Server_URL);
 }
-
 void ServerHeartbeat(string msg){
    ServerPost("/ea/heartbeat",StringFormat(
-      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"timeframe\":\"%s\",\"balance\":%.2f,\"equity\":%.2f,\"message\":\"%s\"}",
-      __FILE__,_Symbol,EnumToString(Period()),
-      AccountInfoDouble(ACCOUNT_BALANCE),AccountInfoDouble(ACCOUNT_EQUITY),msg));
+      "{\"ea_name\":\"ProTraderEA\",\"symbol\":\"%s\",\"timeframe\":\"%s\",\"balance\":%.2f,\"equity\":%.2f,\"message\":\"%s\"}",
+      _Symbol,EnumToString(Period()),AccountInfoDouble(ACCOUNT_BALANCE),AccountInfoDouble(ACCOUNT_EQUITY),msg));
 }
-
-void ServerSignal(string direction,int score,string pattern,string reason,double entry,double sl,double tp,double rr){
+void ServerSignalReport(string dir,int score,string pattern,string reason,double entry,double sl,double tp,double rr){
    ServerPost("/ea/signal",StringFormat(
-      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"direction\":\"%s\",\"score\":%d,\"pattern\":\"%s\",\"reason\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f}",
-      __FILE__,_Symbol,direction,score,pattern,reason,entry,sl,tp,rr));
+      "{\"ea_name\":\"ProTraderEA\",\"symbol\":\"%s\",\"direction\":\"%s\",\"score\":%d,\"pattern\":\"%s\",\"reason\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f}",
+      _Symbol,dir,score,pattern,reason,entry,sl,tp,rr));
 }
-
-void ServerTradeOpen(ulong ticket,string direction,double lot,double entry,double sl,double tp,double rr,int score){
+void ServerTradeOpen(ulong ticket,string dir,double lot,double entry,double sl,double tp,double rr,int score){
    ServerPost("/trades/open",StringFormat(
-      "{\"ea_name\":\"%s\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f,\"score\":%d}",
-      __FILE__,ticket,_Symbol,direction,lot,entry,sl,tp,rr,score));
+      "{\"ea_name\":\"ProTraderEA\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f,\"score\":%d}",
+      ticket,_Symbol,dir,lot,entry,sl,tp,rr,score));
 }
-
 void ServerTradeClose(long ticket,double profit,string reason){
    ServerPost("/trades/close",StringFormat(
-      "{\"ea_name\":\"%s\",\"ticket\":%d,\"profit\":%.2f,\"reason\":\"%s\"}",
-      __FILE__,ticket,profit,reason));
+      "{\"ea_name\":\"ProTraderEA\",\"ticket\":%d,\"profit\":%.2f,\"reason\":\"%s\"}",
+      ticket,profit,reason));
 }
+
 
 int OnInit()
 {
@@ -582,6 +578,7 @@ void PlaceLimitOrder(ENUM_ORDER_TYPE type,const SSignal &sig,bool isPyramid)
       g_pendingPlacedBar=iTime(_Symbol,PERIOD_CURRENT,0);
       g_lastOrderBar=g_pendingPlacedBar;g_brokerWait=5;
       g_partialDone=false;
+      if(Use_Server){string d=(type==ORDER_TYPE_BUY_LIMIT)?"BUY":"SELL";ServerSignalReport(d,sig.score,PatName(sig.pattern),sig.reason,limitPrice,sl,tp,tpPt/slPt);ServerTradeOpen(g_pendingTicket,d,lot,limitPrice,sl,tp,tpPt/slPt,sig.score);}
       PrintFormat("%s %s | Lot:%.2f | Limit:%.5f | SL:%.5f(swing) | TP:%.5f(S/R) | RR:1:%.1f | Score:%d/9 | %s",
                   tag,dir,lot,limitPrice,sl,tp,tpPt/slPt,sig.score,sig.reason);
    }else PrintFormat("FAILED err:%d",GetLastError());
@@ -692,7 +689,7 @@ void OnTradeTransaction(const MqlTradeTransaction &t,const MqlTradeRequest &req,
    if(HistoryDealGetInteger(t.deal,DEAL_ENTRY)!=DEAL_ENTRY_OUT)return;
    double p=HistoryDealGetDouble(t.deal,DEAL_PROFIT);g_profit+=p;
    if(p>=0){if(Use_Server)ServerTradeClose(t.deal,p,"WIN");g_wins++;g_consec=0;PrintFormat("WIN +%.2f W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
-   else{g_losses++;g_consec++;PrintFormat("LOSS %.2f W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
+   else{if(Use_Server)ServerTradeClose(t.deal,p,"LOSS");g_losses++;g_consec++;PrintFormat("LOSS %.2f W:%d L:%d WR:%.0f%%",p,g_wins,g_losses,WR());}
    g_partialDone=false;
 }
 
@@ -781,4 +778,4 @@ void MoveAllToBreakeven(){double pt=SymbolInfoDouble(_Symbol,SYMBOL_POINT);for(i
 bool InSession(){MqlDateTime t;TimeToStruct(TimeGMT(),t);return(t.hour>=Sess_Start&&t.hour<Sess_End);}
 bool DailyLoss(){double c=AccountInfoDouble(ACCOUNT_BALANCE);return(((g_dayBal-c)/g_dayBal)*100.0>=Risk_DailyLoss);}
 bool DailyProfit(){return(g_profit>0&&(g_profit/g_dayBal)*100.0>=Risk_DailyProfit);}
-void ResetDay(){static datetime l=0;MqlDateTime n;TimeToStruct(TimeCurrent(),n);MqlDateTime ld;TimeToStruct(l,ld);if(n.day!=ld.day||l==0){g_dayBal=AccountInfoDouble(ACCOUNT_BALANCE);g_profit=0;g_consec=0;l=TimeCurrent();PrintFormat("Day reset | Bal:%.2f",g_dayBal);}}
+void ResetDay(){static datetime l=0;MqlDateTime n;TimeToStruct(TimeCurrent(),n);MqlDateTime ld;TimeToStruct(l,ld);if(n.day!=ld.day||l==0){g_dayBal=AccountInfoDouble(ACCOUNT_BALANCE);g_profit=0;g_consec=0;l=TimeCurrent();if(Use_Server)ServerHeartbeat("DayReset");PrintFormat("Day reset | Bal:%.2f",g_dayBal);}}

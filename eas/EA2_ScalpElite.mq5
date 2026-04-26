@@ -12,7 +12,7 @@
 #include <Trade\OrderInfo.mqh>
 
 input group "=== SERVER ==="
-input string Server_URL = "http://YOUR-SERVER-IP:7001";
+input string Server_URL = "https://odkgh.com/api/trading";
 input string API_Key    = "bmpt-your-secret-key-change-this";
 input bool   Use_Server = true;
 
@@ -133,14 +133,26 @@ void PlaceOrder(ENUM_ORDER_TYPE type,double bid,double slD,double tpD,double pt)
 
 void ManagePend(){
    if(!g_hasPend)return;
-   for(int i=OrdersTotal()-1;i>=0;i--){if(g_order.SelectByIndex(i)&&g_order.Ticket()==g_pendTick){ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)g_order.State();if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}goto exp;}}
-   if(HistoryOrderSelect(g_pendTick)){ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)HistoryOrderGetInteger(g_pendTick,ORDER_STATE);if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}}
-   exp: int bp=0;for(int i=0;i<100;i++){if(iTime(_Symbol,PERIOD_CURRENT,i)<=g_ppBar){bp=i;break;}}
+   bool found=false;
+   for(int i=OrdersTotal()-1;i>=0;i--){
+      if(g_order.SelectByIndex(i)&&g_order.Ticket()==g_pendTick){
+         found=true;
+         ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)g_order.State();
+         if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}
+         break;
+      }
+   }
+   if(!found&&HistoryOrderSelect(g_pendTick)){
+      ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)HistoryOrderGetInteger(g_pendTick,ORDER_STATE);
+      if(st==ORDER_STATE_FILLED||st==ORDER_STATE_CANCELED||st==ORDER_STATE_EXPIRED||st==ORDER_STATE_REJECTED){g_hasPend=false;g_pendTick=0;return;}
+   }
+   int bp=0;
+   for(int i=0;i<100;i++){if(iTime(_Symbol,PERIOD_CURRENT,i)<=g_ppBar){bp=i;break;}}
    if(bp>=Limit_Expiry){if(g_trade.OrderDelete(g_pendTick))Print("CANCELLED");g_hasPend=false;g_pendTick=0;}
 }
 void ScanPend(){for(int i=OrdersTotal()-1;i>=0;i--){if(g_order.SelectByIndex(i)){if(g_order.Symbol()==_Symbol&&g_order.Magic()==g_magic){g_hasPend=true;g_pendTick=g_order.Ticket();g_ppBar=iTime(_Symbol,PERIOD_CURRENT,0);g_loBar=g_ppBar;return;}}}}
 void OnTradeTransaction(const MqlTradeTransaction &t,const MqlTradeRequest &req,const MqlTradeResult &res){if(t.type!=TRADE_TRANSACTION_DEAL_ADD)return;if(!HistoryDealSelect(t.deal))return;if(HistoryDealGetInteger(t.deal,DEAL_MAGIC)!=g_magic)return;if(HistoryDealGetInteger(t.deal,DEAL_ENTRY)==DEAL_ENTRY_IN){g_hasPend=false;g_bwait=0;return;}if(HistoryDealGetInteger(t.deal,DEAL_ENTRY)!=DEAL_ENTRY_OUT)return;double p=HistoryDealGetDouble(t.deal,DEAL_PROFIT);g_profit+=p;if(p>=0){g_wins++;g_consec=0;}else{g_losses++;g_consec++;}if(Use_Server)ServerPost("/api/trading/trades/close",StringFormat("{\"ea_name\":\"ScalpElite\",\"profit\":%.2f}",p));PrintFormat("%s %.2f W:%d L:%d",p>=0?"WIN":"LOSS",p,g_wins,g_losses);}
-void ServerPost(string ep,string json){if(!Use_Server)return;char post[];string res,hdr="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";StringToCharArray(json,post,0,StringLen(json));int r=WebRequest("POST",Server_URL+ep,hdr,3000,post,res,hdr);if(r<0)PrintFormat("Server err %d",GetLastError());}
+void ServerPost(string ep,string json){if(!Use_Server)return;char post[];uchar res[];string resHdr;string hdr="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";StringToCharArray(json,post,0,StringLen(json));int r=WebRequest("POST",Server_URL+ep,hdr,3000,post,res,resHdr);if(r<0)PrintFormat("Server err %d",GetLastError());}
 void ShowMsg(string m){Comment("SCALP ELITE\n"+m);}
 double G(int h,int b,int s){double a[];ArraySetAsSeries(a,true);if(CopyBuffer(h,b,s,1,a)<1)return 0;return a[0];}
 double WR(){int t=g_wins+g_losses;return t>0?((double)g_wins/t)*100:0;}

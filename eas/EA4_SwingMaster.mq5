@@ -15,6 +15,11 @@
 #include <Trade\OrderInfo.mqh>
 enum EAccountType{STELLAR_2STEP,STELLAR_1STEP,STELLAR_LITE,CUSTOM};
 enum EPhase{PHASE_1,PHASE_2,FUNDED};
+input group "=== SERVER CONNECTION ==="
+input string Server_URL = "https://odkgh.com/api/trading";
+input string API_Key    = "bmpt-your-secret-key-change-this";
+input bool   Use_Server = true;
+
 input group "=== FUNDEDNEXT ACCOUNT ==="
 input EAccountType AccountType=STELLAR_2STEP;input EPhase CurrentPhase=PHASE_1;input double AccountBalance=5000.0;
 input group "=== CUSTOM LIMITS ==="
@@ -56,6 +61,44 @@ long g_minStop;ESymType g_symType;SPropLimits g_limits;bool g_targetReached,g_ha
 int GenMagic(string s,ENUM_TIMEFRAMES tf){int h=0;for(int i=0;i<StringLen(s);i++)h=h*31+(int)StringGetCharacter(s,i);return MathAbs(h)%90000+10000+(int)tf+2468;}
 ESymType DetSym(){string s=_Symbol;StringToLower(s);if(StringFind(s,"xau")>=0||StringFind(s,"gold")>=0)return SYM_GOLD;if(StringFind(s,"eur")>=0||StringFind(s,"gbp")>=0||StringFind(s,"usd")>=0||StringFind(s,"jpy")>=0||StringFind(s,"aud")>=0||StringFind(s,"nzd")>=0)return SYM_FOREX;if(StringFind(s,"step")>=0||StringFind(s,"boom")>=0||StringFind(s,"crash")>=0||StringFind(s,"vol")>=0||StringFind(s,"v75")>=0||StringFind(s,"v10")>=0)return SYM_SYNTH;return SYM_OTHER;}
 void SetPropLimits(){double bal=AccountBalance;switch(AccountType){case STELLAR_2STEP:g_limits.dailyLossPct=5.0;g_limits.maxLossPct=10.0;g_limits.profitTarget=(CurrentPhase==PHASE_1)?8.0:(CurrentPhase==PHASE_2)?5.0:0.0;g_limits.minTradingDays=5;break;case STELLAR_1STEP:g_limits.dailyLossPct=3.0;g_limits.maxLossPct=6.0;g_limits.profitTarget=(CurrentPhase==PHASE_1)?10.0:0.0;g_limits.minTradingDays=2;break;case STELLAR_LITE:g_limits.dailyLossPct=4.0;g_limits.maxLossPct=8.0;g_limits.profitTarget=(CurrentPhase==PHASE_1)?8.0:(CurrentPhase==PHASE_2)?4.0:0.0;g_limits.minTradingDays=5;break;default:g_limits.dailyLossPct=Custom_DailyLossPct;g_limits.maxLossPct=Custom_MaxLossPct;g_limits.profitTarget=Custom_ProfitTarget;g_limits.minTradingDays=5;}g_limits.dailyLossAmt=bal*(g_limits.dailyLossPct/100.0);g_limits.maxLossAmt=bal*(g_limits.maxLossPct/100.0);g_limits.profitTargetAmt=bal*(g_limits.profitTarget/100.0);}
+
+//+------------------------------------------------------------------+
+//  SERVER REPORTING — https://odkgh.com/api/trading
+//+------------------------------------------------------------------+
+void ServerPost(string endpoint,string json){
+   if(!Use_Server)return;
+   char post[];uchar result[];string resHeaders;
+   string headers="Content-Type: application/json\r\nX-Api-Key: "+API_Key+"\r\n";
+   StringToCharArray(json,post,0,StringLen(json));
+   int ret=WebRequest("POST",Server_URL+endpoint,headers,5000,post,result,resHeaders);
+   if(ret<0)PrintFormat("Server error %d on %s — add %s to MT5 WebRequest list",GetLastError(),endpoint,Server_URL);
+}
+
+void ServerHeartbeat(string msg){
+   ServerPost("/ea/heartbeat",StringFormat(
+      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"timeframe\":\"%s\",\"balance\":%.2f,\"equity\":%.2f,\"message\":\"%s\"}",
+      __FILE__,_Symbol,EnumToString(Period()),
+      AccountInfoDouble(ACCOUNT_BALANCE),AccountInfoDouble(ACCOUNT_EQUITY),msg));
+}
+
+void ServerSignal(string direction,int score,string pattern,string reason,double entry,double sl,double tp,double rr){
+   ServerPost("/ea/signal",StringFormat(
+      "{\"ea_name\":\"%s\",\"symbol\":\"%s\",\"direction\":\"%s\",\"score\":%d,\"pattern\":\"%s\",\"reason\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f}",
+      __FILE__,_Symbol,direction,score,pattern,reason,entry,sl,tp,rr));
+}
+
+void ServerTradeOpen(ulong ticket,string direction,double lot,double entry,double sl,double tp,double rr,int score){
+   ServerPost("/trades/open",StringFormat(
+      "{\"ea_name\":\"%s\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f,\"score\":%d}",
+      __FILE__,ticket,_Symbol,direction,lot,entry,sl,tp,rr,score));
+}
+
+void ServerTradeClose(long ticket,double profit,string reason){
+   ServerPost("/trades/close",StringFormat(
+      "{\"ea_name\":\"%s\",\"ticket\":%d,\"profit\":%.2f,\"reason\":\"%s\"}",
+      __FILE__,ticket,profit,reason));
+}
+
 int OnInit(){g_magic=GenMagic(_Symbol,Period());g_symType=DetSym();g_minStop=SymbolInfoInteger(_Symbol,SYMBOL_TRADE_STOPS_LEVEL);g_trade.SetExpertMagicNumber(g_magic);g_trade.SetDeviationInPoints(Slippage);g_trade.SetTypeFilling(ORDER_FILLING_IOC);SetPropLimits();h_htfF=iMA(_Symbol,HTF,HTF_EMA_Fast,0,MODE_EMA,PRICE_CLOSE);h_htfS=iMA(_Symbol,HTF,HTF_EMA_Slow,0,MODE_EMA,PRICE_CLOSE);h_ema21=iMA(_Symbol,PERIOD_CURRENT,EMA_21,0,MODE_EMA,PRICE_CLOSE);h_rsi=iRSI(_Symbol,PERIOD_CURRENT,RSI_Period,PRICE_CLOSE);h_atr=iATR(_Symbol,PERIOD_CURRENT,ATR_Period);h_adx=iADX(_Symbol,PERIOD_CURRENT,ADX_Period);h_bb=iBands(_Symbol,PERIOD_CURRENT,BB_Period,0,BB_Dev,PRICE_CLOSE);if(h_htfF==INVALID_HANDLE||h_ema21==INVALID_HANDLE||h_rsi==INVALID_HANDLE||h_atr==INVALID_HANDLE){Print("Indicator FAILED");return INIT_FAILED;}g_startBal=AccountInfoDouble(ACCOUNT_BALANCE);g_dayStartBal=g_startBal;g_highestBal=g_startBal;g_lastBar=0;g_consec=0;g_wins=0;g_losses=0;g_profit=0;g_dayProfit=0;g_tradingDays=0;g_lastTradeDay=0;g_targetReached=false;g_hasPending=false;g_pendingTicket=0;g_pendingPlacedBar=0;g_lastOrderBar=0;g_brokerWait=0;ScanExistingPending();PrintFormat("FundedNextEA v2.02 | %s | %s %s | PYRAMIDING ON",_Symbol,AccTypeName(),PhaseName());PrintFormat("DLL=%.1f%%(%.2f) MLL=%.1f%%(%.2f) Target=%.1f%%(%.2f)",g_limits.dailyLossPct,g_limits.dailyLossAmt,g_limits.maxLossPct,g_limits.maxLossAmt,g_limits.profitTarget,g_limits.profitTargetAmt);return INIT_SUCCEEDED;}
 void OnDeinit(const int r){int h[]={h_htfF,h_htfS,h_ema21,h_rsi,h_atr,h_adx,h_bb};for(int i=0;i<ArraySize(h);i++)IndicatorRelease(h[i]);Comment("");}
 void OnTick()
