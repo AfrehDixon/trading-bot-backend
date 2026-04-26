@@ -12,7 +12,7 @@
 #include <Trade\OrderInfo.mqh>
 
 input group "=== SERVER ==="
-input string Server_URL = "http://YOUR-SERVER-IP:3000";
+input string Server_URL = "http://YOUR-SERVER-IP:7001";
 input string API_Key    = "bmpt-your-secret-key-change-this";
 input bool   Use_Server = true;
 
