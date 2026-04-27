@@ -80,7 +80,7 @@ void OnDeinit(const int r){IndicatorRelease(h_rsi);IndicatorRelease(h_emaF);Indi
 
 void OnTick(){
    ResetDay();
-   static int hbCount=0; hbCount++; if(hbCount>=50){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
+   static int hbCount=0; hbCount++; if(hbCount>=10){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
    if(DailyLoss()){ShowMsg("DAILY LOSS");return;}
    if(DailyProfit()){ShowMsg("DAILY PROFIT");return;}
    if(g_consec>=Risk_MaxConsec){ShowMsg("MAX LOSSES");return;}
@@ -129,7 +129,7 @@ void PlaceOrder(ENUM_ORDER_TYPE type,double bid,double slD,double tpD,double pt)
    double lot=LotSize(slD);if(lot<=0)return;
    bool ok=(type==ORDER_TYPE_BUY_LIMIT)?g_trade.BuyLimit(lot,lp,_Symbol,sl,tp,ORDER_TIME_GTC,0,"SCALP"):g_trade.SellLimit(lot,lp,_Symbol,sl,tp,ORDER_TIME_GTC,0,"SCALP");
    if(ok){g_pendTick=g_trade.ResultOrder();g_hasPend=true;g_ppBar=iTime(_Symbol,PERIOD_CURRENT,0);g_loBar=g_ppBar;g_bwait=5;
-      if(Use_Server)ServerPost("/api/trading/ea/signal",StringFormat("{\"ea_name\":\"ScalpElite\",\"symbol\":\"%s\",\"direction\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.1f}",_Symbol,type==ORDER_TYPE_BUY_LIMIT?"BUY":"SELL",lp,sl,tp,tpPt/slPt));}
+      if(Use_Server)ServerPost("/api/trading/ea/signal",StringFormat("{\"ea_name\":\"ScalpElite\",\"symbol\":\"%s\",\"direction\":\"%s\",\"entry\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.1f}",_Symbol,type==ORDER_TYPE_BUY_LIMIT?"BUY":"SELL",lp,sl,tp,tpPt/slPt));if(Use_Server)ServerPost("/api/trading/trades/open",StringFormat("{\"ea_name\":\"ScalpElite\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f}",g_pendTick,_Symbol,type==ORDER_TYPE_BUY_LIMIT?"BUY":"SELL",lot,lp,sl,tp));}
 }
 
 void ManagePend(){

@@ -226,7 +226,7 @@ void OnTick()
    if(bar==g_lastBar) return;
    g_lastBar=bar;
    // Send heartbeat every 10 bars so dashboard stays alive
-   static int hbCount=0; hbCount++; if(hbCount>=10){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
+   static int hbCount=0; hbCount++; if(hbCount>=2){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
 
    ResetDay();
    if(DailyLoss())              {ShowMsg("DAILY LOSS — STOPPED");return;}

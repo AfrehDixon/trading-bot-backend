@@ -104,7 +104,7 @@ void OnDeinit(const int r){
 
 void OnTick(){
    datetime bar=iTime(_Symbol,PERIOD_CURRENT,0);if(bar==g_lastBar)return;g_lastBar=bar;
-   static int hbCount=0; hbCount++; if(hbCount>=10){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
+   static int hbCount=0; hbCount++; if(hbCount>=2){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
    ResetDay();UpdateHigh();
    double eq=AccountInfoDouble(ACCOUNT_EQUITY),bal=AccountInfoDouble(ACCOUNT_BALANCE);
    double ddDay=(g_dayBal-eq)/g_dayBal*100;
@@ -154,7 +154,7 @@ void PlaceOrder(ENUM_ORDER_TYPE type,const SSignal &sig,bool isPyr){
    if(ok){
       g_pendTick=g_trade.ResultOrder();g_hasPend=true;g_ppBar=iTime(_Symbol,PERIOD_CURRENT,0);
       g_loBar=g_ppBar;g_bwait=5;g_partDone=false;
-      if(Use_Server)ServerSignal(sig,lp,sl,tp,tpPt/slPt);
+      if(Use_Server){ServerSignal(sig,lp,sl,tp,tpPt/slPt);ServerPost("/api/trading/trades/open",StringFormat("{\"ea_name\":\"PropFirmElite\",\"ticket\":%d,\"symbol\":\"%s\",\"direction\":\"%s\",\"lot_size\":%.2f,\"entry_price\":%.5f,\"sl\":%.5f,\"tp\":%.5f,\"rr\":%.2f,\"score\":%d}",g_pendTick,_Symbol,(type==ORDER_TYPE_BUY_LIMIT)?"BUY":"SELL",lot,lp,sl,tp,tpPt/slPt,sig.score));}
       PrintFormat("PROP ORDER %s Lot:%.2f Limit:%.5f SL:%.5f TP:%.5f RR:1:%.1f Score:%d/7",
          (type==ORDER_TYPE_BUY_LIMIT)?"BUY":"SELL",lot,lp,sl,tp,tpPt/slPt,sig.score);
    }
