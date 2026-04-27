@@ -104,6 +104,7 @@ void OnDeinit(const int r){
 
 void OnTick(){
    datetime bar=iTime(_Symbol,PERIOD_CURRENT,0);if(bar==g_lastBar)return;g_lastBar=bar;
+   static int hbCount=0; hbCount++; if(hbCount>=10){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
    ResetDay();UpdateHigh();
    double eq=AccountInfoDouble(ACCOUNT_EQUITY),bal=AccountInfoDouble(ACCOUNT_BALANCE);
    double ddDay=(g_dayBal-eq)/g_dayBal*100;

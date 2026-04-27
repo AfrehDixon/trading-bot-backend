@@ -104,6 +104,7 @@ void OnDeinit(const int r){int h[]={h_htfF,h_htfS,h_ema21,h_rsi,h_atr,h_adx,h_bb
 void OnTick()
 {
    datetime bar=iTime(_Symbol,PERIOD_CURRENT,0);if(bar==g_lastBar)return;g_lastBar=bar;
+   static int hbCount=0; hbCount++; if(hbCount>=10){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
    ResetDaily();UpdateHighestBal();
    double equity=AccountInfoDouble(ACCOUNT_EQUITY),bal=AccountInfoDouble(ACCOUNT_BALANCE);
    double dayLoss=g_dayStartBal-equity,maxDD=g_highestBal-equity,totalProfit=bal-g_startBal;

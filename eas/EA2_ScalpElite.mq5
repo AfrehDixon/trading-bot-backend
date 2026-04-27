@@ -80,6 +80,7 @@ void OnDeinit(const int r){IndicatorRelease(h_rsi);IndicatorRelease(h_emaF);Indi
 
 void OnTick(){
    ResetDay();
+   static int hbCount=0; hbCount++; if(hbCount>=50){hbCount=0;if(Use_Server)ServerHeartbeat("running");}
    if(DailyLoss()){ShowMsg("DAILY LOSS");return;}
    if(DailyProfit()){ShowMsg("DAILY PROFIT");return;}
    if(g_consec>=Risk_MaxConsec){ShowMsg("MAX LOSSES");return;}
